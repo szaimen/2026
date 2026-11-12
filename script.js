@@ -13,6 +13,7 @@
   const lightboxImg = document.getElementById('lightbox-img');
   const lightboxCaption = document.getElementById('lightbox-caption');
   const toast = document.getElementById('toast');
+  const spinner = document.getElementById('spinner');
 
   // ---------- plant garland frames ----------
   // Every .gframe gets one continuous branch drawn around it as an SVG,
@@ -197,9 +198,11 @@
     if (revealed) btn.classList.add('open');
 
     // Preload today's heart so it pops up instantly.
-    if (n === goldDay) new Image().src = heartSrc(n);
+    if (n === goldDay) preloadHeart(n);
 
     btn.addEventListener('click', () => onDoorClick(btn, n));
+    // Start loading the heart as soon as the pointer is on an unlocked door
+    if (isUnlocked) btn.addEventListener('pointerenter', () => preloadHeart(n), { once: true });
     return btn;
   }
 
@@ -235,16 +238,32 @@
 
   // Load the new heart first, then swap it in and open the modal, so the
   // previously shown heart never flashes up.
+  const heartCache = new Map();
+  function preloadHeart(n) {
+    if (!heartCache.has(n)) {
+      const img = new Image();
+      img.src = heartSrc(n);
+      const ready = img.decode ? img.decode() : new Promise((res) => { img.onload = res; img.onerror = res; });
+      heartCache.set(n, ready.catch(() => {}));
+    }
+    return heartCache.get(n);
+  }
+
   let lightboxRequest = 0;
+  let spinnerTimer;
+  const hideSpinner = () => { clearTimeout(spinnerTimer); spinner.classList.remove('show'); };
+
   function openLightbox(n) {
     const request = ++lightboxRequest;
     const src = heartSrc(n);
-    const preload = new Image();
-    preload.src = src;
-    const ready = preload.decode ? preload.decode() : new Promise((res) => { preload.onload = res; });
 
-    ready.catch(() => {}).then(() => {
+    // Only show the spinner if loading takes noticeably long
+    clearTimeout(spinnerTimer);
+    spinnerTimer = setTimeout(() => spinner.classList.add('show'), 150);
+
+    preloadHeart(n).then(() => {
       if (request !== lightboxRequest) return; // another door was clicked meanwhile
+      hideSpinner();
       lightboxImg.src = src;
       lightboxImg.alt = `Heart behind door ${n}`;
       lightboxCaption.textContent = `December ${n}`;
@@ -256,11 +275,13 @@
 
   function closeLightbox() {
     lightboxRequest++; // cancel a heart that is still loading
+    hideSpinner();
     if (typeof lightbox.close === 'function') lightbox.close();
     else lightbox.removeAttribute('open');
   }
 
   lightbox.addEventListener('click', closeLightbox);
+  spinner.addEventListener('click', closeLightbox); // tap to cancel loading
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && lightbox.hasAttribute('open')) closeLightbox();
   });
