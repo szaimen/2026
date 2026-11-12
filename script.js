@@ -331,22 +331,6 @@
   const installManual = document.getElementById('install-manual');
   let installPrompt = null;
 
-  // Intro: "Continue" leads to a second step with the install tip,
-  // unless the calendar already runs as an installed app.
-  const introStep1 = document.getElementById('intro-step-1');
-  const introStep2 = document.getElementById('intro-step-2');
-  const introContinue = document.getElementById('intro-continue');
-
-  if (!isInstalled()) {
-    installManual.hidden = false;
-    introContinue.type = 'button';
-    introContinue.addEventListener('click', () => {
-      introStep1.hidden = true;
-      introStep2.hidden = false;
-      introStep2.querySelector('.intro-start').focus();
-    });
-  }
-
   // Chrome / Edge / Brave offer a real install prompt
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
@@ -372,12 +356,14 @@
   // ---------- daily "new door" notifications ----------
   // GitHub Pages has no server for push messages, so the reminder uses the
   // browser's Periodic Background Sync (Chrome/Edge/Brave, installed app):
-  // the service worker wakes up roughly every few hours and notifies once
-  // per new door. As a fallback, an open tab notifies right after midnight.
+  // the service worker wakes up every few hours (the browser decides) and
+  // notifies once per new door. As a fallback, an open app/tab notifies
+  // right after midnight.
 
-  const STORAGE_NOTIFY_ASKED = `advent-${YEAR}-notify-asked`;
-  const notifyDialog = document.getElementById('notify');
   const canNotify = 'Notification' in window && 'serviceWorker' in navigator;
+  // Background wake-ups only exist in Chromium browsers (not iPhone/Firefox)
+  const canRemindDaily = canNotify && 'ServiceWorkerRegistration' in window &&
+    'periodicSync' in ServiceWorkerRegistration.prototype;
 
   async function enableDailyReminder() {
     const reg = await navigator.serviceWorker.ready;
@@ -390,47 +376,59 @@
     reg.active?.postMessage({ type: 'seen', day: unlocked });
   }
 
-  // After the first heart was closed: explain, then ask the browser for permission
-  lightbox.addEventListener('close', () => {
-    if (!canNotify || Notification.permission !== 'default') return;
-    let asked = false;
-    try { asked = localStorage.getItem(STORAGE_NOTIFY_ASKED) === '1'; } catch { /* ignore */ }
-    if (asked || typeof notifyDialog.showModal !== 'function') return;
-    // In a normal browser tab, point out that reminders need the installed app
-    document.getElementById('notify-install-tip').hidden = isInstalled();
-    setTimeout(() => notifyDialog.showModal(), 400);
-  });
-
-  notifyDialog.addEventListener('close', async () => {
-    try { localStorage.setItem(STORAGE_NOTIFY_ASKED, '1'); } catch { /* ignore */ }
-    if (notifyDialog.returnValue !== 'yes') return;
-    try {
-      if (await Notification.requestPermission() === 'granted') {
-        await enableDailyReminder();
-        showToast('Lovely! You will get a reminder when a new door opens.');
-      }
-    } catch { /* permission request failed */ }
-  });
-
   // Keep the background sync registered on every visit once permission exists
   if (canNotify && Notification.permission === 'granted') {
     enableDailyReminder().catch(() => {});
   }
 
-  // Fallback for an open tab: after the midnight reload, if the page is in the
-  // background, let the service worker announce the newly opened door.
+  // Fallback: after the midnight reload, if the page is in the background,
+  // let the service worker announce the newly opened door.
   if (canNotify && Notification.permission === 'granted' && document.hidden && goldDay) {
     navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage({ type: 'check', day: goldDay }));
   }
 
-  // ---------- intro (first visit only) ----------
+  // ---------- intro ----------
+  // Browser tab:            1 credits → 2 "install as app" → close
+  // First start as an app:  1 credits → 3 "daily reminder?" → close
+  // (step 3 only where reminders can actually be delivered)
 
   const STORAGE_INTRO = `advent-${YEAR}-intro-seen`;
+  const STORAGE_APP_INTRO = `advent-${YEAR}-app-intro-seen`;
   const intro = document.getElementById('intro');
+  const introSteps = [1, 2, 3].map((n) => document.getElementById(`intro-step-${n}`));
+  const introContinue = document.getElementById('intro-continue');
+  const installed = isInstalled();
+  const storageKey = installed ? STORAGE_APP_INTRO : STORAGE_INTRO;
+
   let introSeen = false;
-  try { introSeen = localStorage.getItem(STORAGE_INTRO) === '1'; } catch { /* ignore */ }
+  try { introSeen = localStorage.getItem(storageKey) === '1'; } catch { /* ignore */ }
   // ?intro in the URL always shows the intro (handy for testing).
   if (new URLSearchParams(location.search).has('intro')) introSeen = false;
+
+  const nextStep = !installed ? 2
+    : (canRemindDaily && Notification.permission === 'default') ? 3
+    : null;
+
+  const showStep = (n) => {
+    introSteps.forEach((step, i) => { step.hidden = i !== n - 1; });
+    introSteps[n - 1].querySelector('.intro-start').focus();
+  };
+
+  if (nextStep) {
+    if (nextStep === 2) installManual.hidden = false;
+    introContinue.type = 'button';
+    introContinue.addEventListener('click', () => showStep(nextStep));
+  }
+
+  // "Remind me": ask right inside the click, so the browser shows its prompt
+  document.getElementById('notify-yes').addEventListener('click', () => {
+    Notification.requestPermission().then((result) => {
+      if (result !== 'granted') return;
+      enableDailyReminder().catch(() => {});
+      showToast('Lovely! You will get a reminder when a new door opens.');
+    }).catch(() => {});
+  });
+
   if (!introSeen && typeof intro.showModal === 'function') {
     const snow = intro.querySelector('.snow');
     for (let i = 0; i < 45; i++) {
@@ -446,7 +444,7 @@
       snow.appendChild(f);
     }
     intro.addEventListener('close', () => {
-      try { localStorage.setItem(STORAGE_INTRO, '1'); } catch { /* ignore */ }
+      try { localStorage.setItem(storageKey, '1'); } catch { /* ignore */ }
     });
     intro.showModal();
   }

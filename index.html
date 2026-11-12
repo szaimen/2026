@@ -31,31 +31,6 @@
     </figure>
   </dialog>
 
-  <dialog id="notify" class="intro notify" aria-labelledby="notify-title">
-    <form method="dialog" class="intro-card gframe">
-      <div class="intro-body gf-content">
-        <h2 id="notify-title">Daily reminder?</h2>
-        <p class="notify-text">
-          A new door opens every day until Christmas Eve. If you like, this calendar
-          can send you <strong>one notification per day</strong> as soon as the next
-          door is ready, so you don't miss a heart.
-        </p>
-        <p class="notify-text notify-small">
-          Your browser will ask for permission next. Nothing else is sent, and no data
-          leaves your device.
-        </p>
-        <p id="notify-install-tip" class="install-hint" hidden>
-          For the reminders to arrive, install the calendar as an app in
-          <strong>Chrome</strong>, <strong>Edge</strong> or <strong>Brave</strong>.
-        </p>
-        <div class="notify-actions">
-          <button type="submit" value="no" class="notify-no">No, thanks</button>
-          <button type="submit" value="yes" class="intro-start" autofocus>Remind me</button>
-        </div>
-      </div>
-    </form>
-  </dialog>
-
   <dialog id="intro" class="intro" aria-labelledby="intro-title">
     <div class="snow" aria-hidden="true"></div>
     <form method="dialog" class="intro-card gframe">
@@ -96,6 +71,27 @@
           </div>
 
           <button type="submit" class="intro-start">Close</button>
+        </div>
+
+        <!-- Step 3: daily reminder (only on first start of the installed app) -->
+        <div class="intro-step notify" id="intro-step-3" hidden>
+          <h2>Daily reminder?</h2>
+
+          <div class="divider" aria-hidden="true"><span></span><svg viewBox="0 0 24 24"><path d="M12 1l2.6 7.4L22 9l-6 4.6L18.2 21 12 16.8 5.8 21 8 13.6 2 9l7.4-.6z"/></svg><span></span></div>
+
+          <p class="notify-text">
+            A new door opens every day until Christmas Eve. If you like, the calendar
+            can send you <strong>one notification per day</strong> as soon as the next
+            door is ready, so you don't miss a heart.
+          </p>
+          <p class="notify-text notify-small">
+            Your device will ask for permission next. Nothing else is sent, and no data
+            leaves your device.
+          </p>
+          <div class="notify-actions">
+            <button type="submit" value="no" class="notify-no">No, thanks</button>
+            <button type="submit" value="yes" id="notify-yes" class="intro-start">Remind me</button>
+          </div>
         </div>
       </div>
     </form>
