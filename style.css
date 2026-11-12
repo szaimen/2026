@@ -55,10 +55,8 @@ html, body {
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .45));
 }
 
-.garland .stem { fill: none; stroke: #4f5a2c; stroke-linecap: round; }
-/* light leaf edge and midrib like real holly; strokes don't scale with the leaf */
-.garland .leaf { stroke: rgba(190, 225, 150, .45); stroke-width: .8; vector-effect: non-scaling-stroke; stroke-linejoin: miter; }
-.garland .rib  { fill: none; stroke: rgba(200, 235, 160, .5); stroke-width: .9; vector-effect: non-scaling-stroke; }
+.garland .stem { fill: none; stroke: #5b4a2a; stroke-linecap: round; }
+.garland .vein { stroke: rgba(255, 255, 255, .25); stroke-width: .7; fill: none; }
 
 /* Title sitting in the gap of the top garland */
 .gframe > .gf-title {
