@@ -233,15 +233,29 @@
 
   // ---------- lightbox ----------
 
+  // Load the new heart first, then swap it in and open the modal, so the
+  // previously shown heart never flashes up.
+  let lightboxRequest = 0;
   function openLightbox(n) {
-    lightboxImg.src = heartSrc(n);
-    lightboxImg.alt = `Heart behind door ${n}`;
-    lightboxCaption.textContent = `December ${n}`;
-    if (typeof lightbox.showModal === 'function') lightbox.showModal();
-    else lightbox.setAttribute('open', '');
+    const request = ++lightboxRequest;
+    const src = heartSrc(n);
+    const preload = new Image();
+    preload.src = src;
+    const ready = preload.decode ? preload.decode() : new Promise((res) => { preload.onload = res; });
+
+    ready.catch(() => {}).then(() => {
+      if (request !== lightboxRequest) return; // another door was clicked meanwhile
+      lightboxImg.src = src;
+      lightboxImg.alt = `Heart behind door ${n}`;
+      lightboxCaption.textContent = `December ${n}`;
+      if (lightbox.hasAttribute('open')) return;
+      if (typeof lightbox.showModal === 'function') lightbox.showModal();
+      else lightbox.setAttribute('open', '');
+    });
   }
 
   function closeLightbox() {
+    lightboxRequest++; // cancel a heart that is still loading
     if (typeof lightbox.close === 'function') lightbox.close();
     else lightbox.removeAttribute('open');
   }
