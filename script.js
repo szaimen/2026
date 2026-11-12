@@ -130,6 +130,7 @@
     svg.insertAdjacentHTML('beforeend', leaves + berries);
   }
 
+  const redrawFns = new Map(); // frame → redraw(), for content changes like intro steps
   document.querySelectorAll('.gframe').forEach((frame) => {
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('class', 'garland');
@@ -139,6 +140,7 @@
     // Drawing only touches the absolutely positioned SVG, so it can't
     // change the frame's size and re-trigger the observer.
     const redraw = () => drawGarland(frame, svg);
+    redrawFns.set(frame, redraw);
     redraw();
     // Images inside the frame (e.g. the heart photo) change its size once loaded
     frame.querySelectorAll('img').forEach((img) => img.addEventListener('load', redraw));
@@ -355,7 +357,7 @@
 
   // ---------- daily "new door" notifications ----------
   // GitHub Pages has no server for push messages, so the reminder uses the
-  // browser's Periodic Background Sync (Chrome/Edge/Brave, installed app):
+  // browser's Periodic Background Sync (Chrome/Edge, installed app):
   // the service worker wakes up every few hours (the browser decides) and
   // notifies once per new door. As a fallback, an open app/tab notifies
   // right after midnight.
@@ -392,49 +394,52 @@
     navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage({ type: 'check', day: goldDay }));
   }
 
-  // ---------- intro ----------
-  // Browser tab:            1 credits → 2 "install as app" → close
-  // First start as an app:  1 credits → 3 "daily reminder?" → close
-  // (step 3 only where reminders can actually be delivered)
+  // ---------- intro (initial setup, until it was completed once) ----------
+  // 1 credits → 2 "install as app" (skipped inside the installed app)
+  //           → 3 "daily reminder?" → close
 
   const STORAGE_INTRO = `advent-${YEAR}-intro-seen`;
-  const STORAGE_APP_INTRO = `advent-${YEAR}-app-intro-seen`;
   const intro = document.getElementById('intro');
   const introSteps = [1, 2, 3].map((n) => document.getElementById(`intro-step-${n}`));
-  const introContinue = document.getElementById('intro-continue');
   const installed = isInstalled();
-  const storageKey = installed ? STORAGE_APP_INTRO : STORAGE_INTRO;
 
   let introSeen = false;
-  try { introSeen = localStorage.getItem(storageKey) === '1'; } catch { /* ignore */ }
+  try { introSeen = localStorage.getItem(STORAGE_INTRO) === '1'; } catch { /* ignore */ }
   // ?intro in the URL always shows the intro (handy for testing).
   if (new URLSearchParams(location.search).has('intro')) introSeen = false;
 
-  // Step 3 whenever the app can ask; browsers without background wake-ups
-  // (e.g. Firefox, possibly Brave) get an honest note about the limitation.
-  const nextStep = !installed ? 2
-    : (canNotify && Notification.permission === 'default') ? 3
-    : null;
+  const nextStep = installed ? 3 : 2;
+  installManual.hidden = installed;
+  // Browsers without background wake-ups get an honest note about the limitation
   document.getElementById('notify-limited').hidden = canRemindDaily;
 
   const showStep = (n) => {
     introSteps.forEach((step, i) => { step.hidden = i !== n - 1; });
     introSteps[n - 1].querySelector('.intro-start').focus();
+    redrawFns.get(intro.querySelector('.gframe'))?.(); // the card changed its height
   };
 
-  if (nextStep) {
-    if (nextStep === 2) installManual.hidden = false;
-    introContinue.type = 'button';
-    introContinue.addEventListener('click', () => showStep(nextStep));
-  }
+  // Only finishing step 3 completes the setup – Esc must not skip it
+  intro.addEventListener('cancel', (event) => event.preventDefault());
+
+  document.getElementById('intro-continue').addEventListener('click', () => showStep(nextStep));
+  document.getElementById('install-continue').addEventListener('click', () => showStep(3));
 
   // "Remind me": ask right inside the click, so the browser shows its prompt
   document.getElementById('notify-yes').addEventListener('click', () => {
+    if (!canNotify) {
+      showToast('Sorry – this browser does not support notifications.');
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      showToast('Notifications are blocked – allow them in the site settings of your browser.');
+      return;
+    }
     Notification.requestPermission().then((result) => {
       if (result !== 'granted') return;
       enableDailyReminder().then((daily) => showToast(daily
         ? 'Lovely! You will get a reminder when a new door opens.'
-        : 'Notifications are on – but this browser only reminds you while the calendar is open.'))
+        : 'Notifications are on – install the app in Chrome or Edge for daily reminders.'))
         .catch(() => {});
     }).catch(() => {});
   });
@@ -454,7 +459,7 @@
       snow.appendChild(f);
     }
     intro.addEventListener('close', () => {
-      try { localStorage.setItem(storageKey, '1'); } catch { /* ignore */ }
+      try { localStorage.setItem(STORAGE_INTRO, '1'); } catch { /* ignore */ }
     });
     intro.showModal();
   }

@@ -48,8 +48,7 @@
 
           <p class="made-by">made with <span class="heart">❤️</span> by Simon Lindner</p>
 
-          <!-- script.js turns this into a "next step" button when the install tip is shown -->
-          <button type="submit" id="intro-continue" class="intro-start" autofocus>Continue</button>
+          <button type="button" id="intro-continue" class="intro-start" autofocus>Continue</button>
         </div>
 
         <!-- Step 2: recommend installing the app (skipped when already installed) -->
@@ -70,27 +69,23 @@
             </p>
           </div>
 
-          <button type="submit" class="intro-start">Close</button>
+          <button type="button" id="install-continue" class="intro-start">Continue</button>
         </div>
 
-        <!-- Step 3: daily reminder (only on first start of the installed app) -->
+        <!-- Step 3: daily reminder -->
         <div class="intro-step notify" id="intro-step-3" hidden>
           <h2>Daily reminder?</h2>
 
           <div class="divider" aria-hidden="true"><span></span><svg viewBox="0 0 24 24"><path d="M12 1l2.6 7.4L22 9l-6 4.6L18.2 21 12 16.8 5.8 21 8 13.6 2 9l7.4-.6z"/></svg><span></span></div>
 
           <p class="notify-text">
-            A new door opens every day until Christmas Eve. If you like, the calendar
-            can send you <strong>one notification per day</strong> as soon as the next
-            door is ready, so you don't miss a heart.
+            Get <strong>one notification a day</strong> when a new door opens.
           </p>
           <p id="notify-limited" class="notify-text notify-small" hidden>
-            Note: this browser can only remind you while the calendar is open in the
-            background. For reminders every day, use <strong>Chrome</strong> or <strong>Edge</strong>.
+            Daily reminders need the app in Chrome or Edge.
           </p>
           <p class="notify-text notify-small">
-            Your device will ask for permission next. Nothing else is sent, and no data
-            leaves your device.
+            Nothing else is sent, no data leaves your device.
           </p>
           <div class="notify-actions">
             <button type="submit" value="no" class="notify-no">No, thanks</button>
