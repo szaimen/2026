@@ -8,6 +8,20 @@
   const doorSrc = (n) => `images/doors/door-${n}.jpg`;
   const heartSrc = (n) => `images/hearts/heart-${n}.jpg`;
 
+  // ?reset clears everything this site stored in the browser (opened doors,
+  // intro seen) and then removes the parameter from the URL again.
+  const params = new URLSearchParams(location.search);
+  if (params.has('reset')) {
+    try {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith(`advent-${YEAR}-`))
+        .forEach((key) => localStorage.removeItem(key));
+    } catch { /* storage unavailable */ }
+    params.delete('reset');
+    const query = params.toString();
+    history.replaceState(null, '', location.pathname + (query ? `?${query}` : '') + location.hash);
+  }
+
   const calendar = document.getElementById('calendar');
   const lightbox = document.getElementById('lightbox');
   const lightboxImg = document.getElementById('lightbox-img');
