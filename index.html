@@ -31,6 +31,27 @@
     </figure>
   </dialog>
 
+  <dialog id="notify" class="intro notify" aria-labelledby="notify-title">
+    <form method="dialog" class="intro-card gframe">
+      <div class="intro-body gf-content">
+        <h2 id="notify-title">Daily reminder?</h2>
+        <p class="notify-text">
+          A new door opens every day until Christmas Eve. If you like, this calendar
+          can send you <strong>one notification per day</strong> as soon as the next
+          door is ready, so you don't miss a heart.
+        </p>
+        <p class="notify-text notify-small">
+          Your browser will ask for permission next. Nothing else is sent, and no data
+          leaves your device.
+        </p>
+        <div class="notify-actions">
+          <button type="submit" value="no" class="notify-no">No, thanks</button>
+          <button type="submit" value="yes" class="intro-start" autofocus>Remind me</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="intro" class="intro" aria-labelledby="intro-title">
     <div class="snow" aria-hidden="true"></div>
     <form method="dialog" class="intro-card gframe">
@@ -45,6 +66,18 @@
         </dl>
 
         <p class="made-by">made with <span class="heart">❤️</span> by Simon Lindner</p>
+
+        <div id="install-hint" class="install-hint" hidden>
+          <p>
+            <strong>Tip:</strong> install the calendar as an app – then it can remind you
+            every day when a new door opens. Reminders work in <strong>Chrome</strong>,
+            <strong>Edge</strong> or <strong>Brave</strong>.
+          </p>
+          <button type="button" id="install-btn" class="install-btn" hidden>Install app</button>
+          <p id="install-manual" class="install-manual" hidden>
+            Open the browser menu and choose “Install app” or “Add to Home screen”.
+          </p>
+        </div>
 
         <button type="submit" class="intro-start" autofocus>Continue</button>
       </div>

@@ -424,6 +424,88 @@ body {
   outline: none;
 }
 
+/* ---------- Install hint (in the intro) ---------- */
+
+.install-hint {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px dashed rgba(var(--green), .6);
+  border-radius: 14px;
+  background: rgba(var(--green), .07);
+  font-size: 16px;
+  line-height: 1.4;
+  color: #eaf2ff;
+}
+
+.install-hint p { margin: 0; }
+.install-hint strong { color: rgb(var(--yellow)); font-weight: 600; }
+
+.install-btn {
+  margin-top: 10px;
+  padding: 7px 20px;
+  border: 1px solid rgba(var(--green), .8);
+  border-radius: 999px;
+  background: rgba(var(--green), .15);
+  color: #eaffea;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.install-btn:hover { background: rgba(var(--green), .28); }
+
+.install-manual {
+  margin-top: 8px !important;
+  font-size: 14px;
+  font-style: italic;
+  color: #a9c8ff;
+}
+
+/* ---------- Notification permission dialog ---------- */
+
+.notify h2 {
+  font-size: clamp(34px, 8vw, 48px);
+}
+
+.notify-text {
+  margin: 12px 0 0;
+  font-size: 19px;
+  line-height: 1.4;
+  color: #fff8d6;
+}
+
+.notify-text strong { color: rgb(var(--yellow)); font-weight: 600; }
+
+.notify-small {
+  font-size: 15px;
+  font-style: italic;
+  color: #a9c8ff;
+}
+
+.notify-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+  margin-top: 4px;
+}
+
+.notify-no {
+  margin-top: 20px;
+  padding: 11px 22px;
+  border: 1px solid rgba(var(--green), .7);
+  border-radius: 999px;
+  background: transparent;
+  color: rgb(var(--green));
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 19px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notify-no:hover { background: rgba(var(--green), .12); }
+
 /* ---------- Lightbox (heart view) ---------- */
 
 .lightbox {

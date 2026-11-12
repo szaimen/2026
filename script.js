@@ -321,6 +321,94 @@
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
   }
 
+  // ---------- install as app ----------
+  // Recommended in the intro, because daily reminders need the installed app.
+
+  const isInstalled = () =>
+    matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+  const installHint = document.getElementById('install-hint');
+  const installBtn = document.getElementById('install-btn');
+  const installManual = document.getElementById('install-manual');
+  let installPrompt = null;
+
+  if (!isInstalled()) {
+    installHint.hidden = false;
+    installManual.hidden = false;
+  }
+
+  // Chrome / Edge / Brave offer a real install prompt
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    installPrompt = event;
+    installBtn.hidden = false;
+    installManual.hidden = true;
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    installPrompt = null;
+    installBtn.hidden = true;
+    if (outcome === 'accepted') installHint.hidden = true;
+  });
+
+  window.addEventListener('appinstalled', () => { installHint.hidden = true; });
+
+  // ---------- daily "new door" notifications ----------
+  // GitHub Pages has no server for push messages, so the reminder uses the
+  // browser's Periodic Background Sync (Chrome/Edge/Brave, installed app):
+  // the service worker wakes up roughly every few hours and notifies once
+  // per new door. As a fallback, an open tab notifies right after midnight.
+
+  const STORAGE_NOTIFY_ASKED = `advent-${YEAR}-notify-asked`;
+  const notifyDialog = document.getElementById('notify');
+  const canNotify = 'Notification' in window && 'serviceWorker' in navigator;
+
+  async function enableDailyReminder() {
+    const reg = await navigator.serviceWorker.ready;
+    if ('periodicSync' in reg) {
+      try {
+        await reg.periodicSync.register('new-door', { minInterval: 6 * 60 * 60 * 1000 });
+      } catch { /* only allowed for installed apps; the open-tab fallback still works */ }
+    }
+    // Remember today's door as already announced, so the first notification is the next one
+    reg.active?.postMessage({ type: 'seen', day: unlocked });
+  }
+
+  // After the first heart was closed: explain, then ask the browser for permission
+  lightbox.addEventListener('close', () => {
+    // Only in the installed app – in a normal browser tab reminders can't be delivered
+    if (!canNotify || !isInstalled() || Notification.permission !== 'default') return;
+    let asked = false;
+    try { asked = localStorage.getItem(STORAGE_NOTIFY_ASKED) === '1'; } catch { /* ignore */ }
+    if (asked || typeof notifyDialog.showModal !== 'function') return;
+    setTimeout(() => notifyDialog.showModal(), 400);
+  });
+
+  notifyDialog.addEventListener('close', async () => {
+    try { localStorage.setItem(STORAGE_NOTIFY_ASKED, '1'); } catch { /* ignore */ }
+    if (notifyDialog.returnValue !== 'yes') return;
+    try {
+      if (await Notification.requestPermission() === 'granted') {
+        await enableDailyReminder();
+        showToast('Lovely! You will get a reminder when a new door opens.');
+      }
+    } catch { /* permission request failed */ }
+  });
+
+  // Keep the background sync registered on every visit once permission exists
+  if (canNotify && Notification.permission === 'granted') {
+    enableDailyReminder().catch(() => {});
+  }
+
+  // Fallback for an open tab: after the midnight reload, if the page is in the
+  // background, let the service worker announce the newly opened door.
+  if (canNotify && Notification.permission === 'granted' && document.hidden && goldDay) {
+    navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage({ type: 'check', day: goldDay }));
+  }
+
   // ---------- intro (first visit only) ----------
 
   const STORAGE_INTRO = `advent-${YEAR}-intro-seen`;
