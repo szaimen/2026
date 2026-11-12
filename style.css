@@ -1,0 +1,481 @@
+:root {
+  --bg: #0b0d12;
+  --gap: 6px;
+  --silver: 220, 226, 235;
+  --gold: 255, 196, 64;
+  --yellow: 247, 212, 76;
+  --green: 143, 209, 139;
+  --navy: 13, 37, 82;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(ellipse at 50% 0%, #10264a, #050b18 75%) fixed, #050b18;
+  color: #eaf2ff;
+  font-family: "Georgia", "Times New Roman", serif;
+  overflow: hidden;
+}
+
+/* ---------- Plant garland frame (page, intro and heart view) ---------- */
+
+/*
+  3×3 grid: the outer rows/columns (--g wide) hold the garland, the content
+  sits in the middle. script.js draws one continuous branch around it.
+*/
+.gframe {
+  --g: 60px; /* garland thickness */
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--g) minmax(0, 1fr) var(--g);
+  grid-template-rows: var(--g) minmax(0, 1fr) var(--g);
+}
+
+.gframe > .gf-content {
+  grid-area: 2 / 2;
+  min-width: 0;
+  min-height: 0;
+  /* tuck the content slightly under the garland */
+  margin: calc(var(--g) * -.3);
+  position: relative;
+  z-index: 1;
+}
+
+/* The garland itself: one SVG drawn by script.js over the whole frame */
+.gframe > .garland {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .45));
+}
+
+.garland .stem { fill: none; stroke: #5b4a2a; stroke-linecap: round; }
+.garland .vein { stroke: rgba(255, 255, 255, .25); stroke-width: .7; fill: none; }
+
+/* Title sitting in the gap of the top garland */
+.gframe > .gf-title {
+  grid-area: 1 / 2;
+  justify-self: center;
+  align-self: center;
+  position: relative;
+  z-index: 3;
+  margin: 0 clamp(8px, 2vmin, 20px);
+  text-align: center;
+  font-family: "Great Vibes", "Snell Roundhand", cursive;
+  font-weight: 400;
+  font-size: min(calc(var(--g) * .7), 6.4vw);
+  line-height: 1.2;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #fffbe0 0%, #f7d44c 55%, #d9a91a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .5));
+}
+
+/* ---------- Page ---------- */
+
+body {
+  padding: 0;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.page {
+  --g: clamp(48px, 9.5vmin, 92px);
+  height: 100%;
+}
+
+/* ---------- Grid ---------- */
+
+.calendar {
+  display: grid;
+  gap: var(--gap);
+  /* columns / rows are set from script.js to best fit the available space */
+  grid-template-columns: repeat(var(--cols, 6), 1fr);
+  grid-template-rows: repeat(var(--rows, 4), 1fr);
+}
+
+/* ---------- Door cell ---------- */
+
+.door {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: #000;
+  cursor: pointer;
+  overflow: visible;
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.door:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  z-index: 5;
+}
+
+.door img {
+  display: block;
+  border-radius: inherit;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ---------- States ---------- */
+
+.door.locked img {
+  filter: grayscale(.55) brightness(.55);
+}
+
+.door.locked { cursor: not-allowed; }
+
+/* Glow ring (drawn on a pseudo element so it sits above the photo) */
+.door::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.door.available::after {
+  box-shadow:
+    inset 0 0 0 2px rgba(var(--silver), .9),
+    inset 0 0 18px rgba(var(--silver), .45),
+    0 0 14px 2px rgba(var(--silver), .55);
+  animation: glow-silver 3.2s ease-in-out infinite;
+}
+
+.door.available { z-index: 1; }
+
+.door.today::after {
+  box-shadow:
+    inset 0 0 0 3px rgba(var(--gold), 1),
+    inset 0 0 26px rgba(var(--gold), .6),
+    0 0 26px 6px rgba(var(--gold), .75);
+  animation: glow-gold 1.8s ease-in-out infinite;
+}
+
+.door.today { z-index: 2; }
+
+/* Revealed doors: softer ring so they stay recognisable */
+.door.open::after { opacity: .5; animation: none; }
+
+@keyframes glow-silver {
+  0%, 100% { opacity: .65; }
+  50%      { opacity: 1; }
+}
+
+@keyframes glow-gold {
+  0%, 100% { opacity: .75; filter: brightness(1); }
+  50%      { opacity: 1;   filter: brightness(1.25); }
+}
+
+/* Locked shake */
+.door.nope { animation: nope 380ms ease-in-out; }
+
+@keyframes nope {
+  0%, 100% { transform: translateX(0) }
+  20% { transform: translateX(-6px) }
+  40% { transform: translateX(6px) }
+  60% { transform: translateX(-4px) }
+  80% { transform: translateX(4px) }
+}
+
+/* ---------- Intro ---------- */
+
+.intro {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: 0;
+  padding: 40px 34px;
+  border: 0;
+  background: transparent;
+  color: #eaf2ff;
+  overflow: hidden;
+}
+
+.intro[open] {
+  display: grid;
+  place-items: center;
+}
+
+.intro::backdrop {
+  background: radial-gradient(ellipse at 50% 35%, rgba(20, 60, 90, .6), rgba(3, 8, 18, .93) 70%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+/* Falling snow (flakes are created in script.js) */
+.snow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.flake {
+  position: absolute;
+  top: -10px;
+  color: #fff;
+  opacity: var(--o, .8);
+  font-size: var(--s, 14px);
+  line-height: 1;
+  animation: fall var(--d, 10s) linear var(--delay, 0s) infinite;
+  text-shadow: 0 0 6px rgba(255, 255, 255, .6);
+}
+
+@keyframes fall {
+  0%   { transform: translate(0, -5vh) rotate(0); }
+  50%  { transform: translate(var(--drift, 20px), 50vh) rotate(180deg); }
+  100% { transform: translate(0, 105vh) rotate(360deg); }
+}
+
+/* The card: garland frame around a blue panel */
+.intro-card {
+  --g: clamp(48px, 9vmin, 76px);
+  width: min(480px, 100%);
+  grid-template-rows: var(--g) auto var(--g);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  animation: card-in 700ms cubic-bezier(.2, .9, .2, 1.15);
+}
+
+.intro-body {
+  padding: calc(var(--g) * .3 + 18px) calc(var(--g) * .3 + 22px);
+  text-align: center;
+  border-radius: calc(var(--g) * .42); /* follows the garland's corner curve */
+  background:
+    radial-gradient(circle at 50% 0%, rgba(var(--yellow), .16), transparent 55%),
+    radial-gradient(circle at 50% 110%, rgba(63, 164, 90, .25), transparent 55%),
+    linear-gradient(165deg, #173f7c 0%, #0d2552 55%, #081733 100%);
+  box-shadow: inset 0 0 0 1px rgba(var(--yellow), .5), 0 20px 60px rgba(0, 0, 0, .6);
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(30px) scale(.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+.intro h2 {
+  margin: 0 0 6px;
+  font-family: "Great Vibes", "Snell Roundhand", cursive;
+  font-weight: 400;
+  font-size: clamp(42px, 11vw, 58px);
+  line-height: 1.02;
+  background: linear-gradient(180deg, #fffbe0 0%, #f7d44c 55%, #d9a91a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .5));
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px auto 18px;
+  width: 70%;
+}
+
+.divider span {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--green), .9), transparent);
+}
+
+.divider svg {
+  width: 18px;
+  height: 18px;
+  fill: rgb(var(--yellow));
+  filter: drop-shadow(0 0 6px rgba(var(--yellow), .8));
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(1) rotate(0); opacity: .85; }
+  50%      { transform: scale(1.2) rotate(18deg); opacity: 1; }
+}
+
+.credits {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.credits dt {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgb(var(--green));
+}
+
+.credits dd {
+  margin: 2px 0 0;
+  font-size: 22px;
+  font-style: italic;
+  color: #fff8d6;
+}
+
+.made-by {
+  margin: 22px 0 0;
+  font-size: 16px;
+  font-style: italic;
+  color: #a9c8ff;
+}
+
+.made-by .heart {
+  display: inline-block;
+  font-style: normal;
+  animation: beat 1.4s ease-in-out infinite;
+}
+
+@keyframes beat {
+  0%, 100% { transform: scale(1); }
+  15%      { transform: scale(1.25); }
+  30%      { transform: scale(1); }
+  45%      { transform: scale(1.18); }
+}
+
+.intro-start {
+  margin-top: 20px;
+  padding: 11px 34px;
+  border: 1px solid #fffbe0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe680, #f0c22e);
+  color: rgb(var(--navy));
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(var(--yellow), .4), inset 0 1px 0 rgba(255, 255, 255, .7);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.intro-start:hover,
+.intro-start:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(var(--yellow), .6), inset 0 1px 0 rgba(255, 255, 255, .7);
+  outline: none;
+}
+
+/* ---------- Lightbox (heart view) ---------- */
+
+.lightbox {
+  max-width: 100vw;
+  max-height: 100vh;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: hidden;
+}
+
+.lightbox::backdrop {
+  background: radial-gradient(ellipse at 50% 35%, rgba(20, 60, 90, .6), rgba(3, 8, 18, .93) 70%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.lightbox[open] {
+  display: grid;
+  place-items: center;
+  cursor: zoom-out;
+}
+
+.heart-card {
+  --g: clamp(48px, 9vmin, 80px);
+  margin: 0;
+  grid-template-columns: var(--g) auto var(--g);
+  grid-template-rows: var(--g) auto var(--g);
+  animation: card-in 600ms cubic-bezier(.2, .9, .2, 1.15);
+}
+
+.heart-body img {
+  display: block;
+  max-width: calc(100vw - 1.4 * var(--g) - 40px);
+  max-height: calc(100vh - 1.4 * var(--g) - 40px);
+  max-height: calc(100dvh - 1.4 * var(--g) - 40px);
+  border-radius: calc(var(--g) * .42); /* follows the garland's corner curve */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .6);
+}
+
+.heart-card > .lightbox-close {
+  position: absolute;
+  top: calc(var(--g) * .1);
+  right: calc(var(--g) * .1);
+  z-index: 3;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #fffbe0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffe680, #f0c22e);
+  color: rgb(var(--navy));
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(var(--yellow), .4);
+}
+
+.lightbox-close:hover { filter: brightness(1.08); }
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 20px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #0d2552;
+  border: 1px solid rgba(var(--yellow), .7);
+  color: #fff8d6;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 18px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease, transform 250ms ease;
+  z-index: 50;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .door.available::after,
+  .door.today::after,
+  .door.nope,
+  .heart-card,
+  .intro-card,
+  .divider svg,
+  .made-by .heart { animation: none; }
+  .snow { display: none; }
+}
