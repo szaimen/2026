@@ -29,20 +29,69 @@
   const toast = document.getElementById('toast');
   const spinner = document.getElementById('spinner');
 
-  // ---------- plant garland frames ----------
-  // Every .gframe gets one continuous branch drawn around it as an SVG,
+  // ---------- holly garland frames ----------
+  // Every .gframe gets one continuous holly branch drawn around it as an SVG,
   // with rounded corners. An optional .gf-title child sits in a gap at the top.
   // The garland is redrawn whenever the frame changes size.
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const LEAF_COLORS = ['#1f6b34', '#2e8b45', '#3fa45a', '#6cbf4f', '#1a5a2c'];
-  const BERRIES = [['#f7d44c', '#f7d44c'], ['#3d7bd9', '#5b9cff']];
 
   // Small deterministic random so leaves don't change on every redraw.
   const rand = (i) => {
     const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
     return x - Math.floor(x);
   };
+
+  // Shared gradients (glossy holly leaves, shiny red berries), defined once.
+  document.body.insertAdjacentHTML('afterbegin', `
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <linearGradient id="holly-1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3f8f4a"/><stop offset=".5" stop-color="#1f6a32"/><stop offset="1" stop-color="#0c3d1d"/>
+        </linearGradient>
+        <linearGradient id="holly-2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#4f9c55"/><stop offset=".5" stop-color="#2a7a3b"/><stop offset="1" stop-color="#124a24"/>
+        </linearGradient>
+        <linearGradient id="holly-3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2f7a40"/><stop offset=".5" stop-color="#175a2a"/><stop offset="1" stop-color="#083016"/>
+        </linearGradient>
+        <radialGradient id="holly-berry" cx="35%" cy="32%" r="70%">
+          <stop offset="0" stop-color="#ff7a6e"/><stop offset=".3" stop-color="#e01b24"/><stop offset=".8" stop-color="#9c0a14"/><stop offset="1" stop-color="#5e0309"/>
+        </radialGradient>
+      </defs>
+    </svg>`);
+
+  // Holly leaf outline in unit size (base at 0,0, tip at 1,0): spiky,
+  // scalloped edges. Scaled per leaf.
+  const HOLLY_LEAF = (() => {
+    const h = (x) => 0.27 * Math.pow(Math.sin(Math.PI * x), 0.75);
+    const f = (n) => n.toFixed(3);
+    const side = (spikes, sign) => {
+      let d = '';
+      let prev = 0;
+      spikes.forEach((x, i) => {
+        const mid = (prev + x) / 2;
+        const cy = i === 0 ? sign * 0.1 : sign * h(mid) * 0.5;   // concave scallop
+        d += ` Q${f(mid)} ${f(cy)} ${f(x + 0.03)} ${f(sign * h(x) * 1.12)}`; // spike point
+        prev = x;
+      });
+      d += ` Q${f(0.92)} ${f(sign * h(0.9) * 0.45)} 1 0`;                 // to the tip
+      return d;
+    };
+    const upper = side([0.17, 0.39, 0.61, 0.81], -1);
+    // lower side: same idea, drawn from the tip back to the base
+    const lowerSpikes = [0.79, 0.58, 0.37, 0.16];
+    let lower = '';
+    let prev = 1;
+    lowerSpikes.forEach((x, i) => {
+      const mid = (prev + x) / 2;
+      const cy = i === 0 ? h(0.9) * 0.45 : h(mid) * 0.5;
+      lower += ` Q${f(mid)} ${f(cy)} ${f(x - 0.02)} ${f(h(x) * 1.12)}`;
+      prev = x;
+    });
+    lower += ` Q${f(0.05)} 0.1 0 0`;
+    return `M0 0${upper}${lower}Z`;
+  })();
 
   function drawGarland(frame, svg) {
     const W = frame.clientWidth;
@@ -74,11 +123,11 @@
     const stem = document.createElementNS(SVG_NS, 'path');
     stem.setAttribute('d', d);
     stem.setAttribute('class', 'stem');
-    stem.setAttribute('stroke-width', (g * 0.035).toFixed(2));
+    stem.setAttribute('stroke-width', (g * 0.04).toFixed(2));
     svg.appendChild(stem);
 
     const total = stem.getTotalLength();
-    const step = g * 0.2;
+    const step = g * 0.24;
     const count = Math.max(1, Math.round(total / step));
     const gap = total / count;
     let leaves = '';
@@ -89,31 +138,34 @@
       const p = stem.getPointAtLength(at);
       const p1 = stem.getPointAtLength(Math.max(0, at - 1));
       const p2 = stem.getPointAtLength(Math.min(total, at + 1));
-      const tangent = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+      const tangent = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+      const deg = tangent * 180 / Math.PI;
       const side = i % 2 ? 1 : -1;
-      const angle = tangent + side * (45 + rand(i) * 20);
-      const len = g * (0.34 + rand(i + 100) * 0.14);
-      const color = LEAF_COLORS[Math.floor(rand(i + 200) * LEAF_COLORS.length)];
-      const t = `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${angle.toFixed(0)})`;
+      const angle = deg + side * (42 + rand(i) * 24);
+      const len = g * (0.42 + rand(i + 100) * 0.14);
+      const fill = `url(#holly-${1 + Math.floor(rand(i + 200) * 3)})`;
+      const t = `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${angle.toFixed(0)}) scale(${len.toFixed(1)})`;
       leaves +=
-        `<path transform="${t}" d="M0 0 Q${len * .45} ${-len * .32} ${len} 0 Q${len * .45} ${len * .32} 0 0Z" fill="${color}"/>` +
-        `<path transform="${t}" d="M1 0 L${len * .85} 0" class="vein"/>`;
+        `<path transform="${t}" d="${HOLLY_LEAF}" fill="${fill}" class="leaf"/>` +
+        `<path transform="${t}" d="M0.04 0 Q0.5 -0.02 0.94 0" class="rib"/>`;
 
-      // A pair of berries every few leaves, alternating yellow and blue
-      if (i % 7 === 3) {
-        const [c1, c2] = BERRIES[Math.floor(i / 7) % 2];
-        const br = g * 0.055;
-        const n = (tangent + 90) * Math.PI / 180;
-        const off = g * 0.1 * (rand(i + 300) > 0.5 ? 1 : -1);
-        [[c1, -br * 1.1], [c2, br * 1.1]].forEach(([c, shift]) => {
-          const tx = Math.cos(tangent * Math.PI / 180) * shift;
-          const ty = Math.sin(tangent * Math.PI / 180) * shift;
-          const x = p.x + Math.cos(n) * off + tx;
-          const y = p.y + Math.sin(n) * off + ty;
+      // A cluster of red berries every few leaves
+      if (i % 6 === 2) {
+        const br = g * 0.072;
+        const n = 3 + Math.floor(rand(i + 300) * 3);           // 3–5 berries
+        const nx = -Math.sin(tangent), ny = Math.cos(tangent);  // normal to the stem
+        const off = g * 0.05 * (rand(i + 400) > 0.5 ? 1 : -1);
+        const cx = p.x + nx * off, cy = p.y + ny * off;
+        for (let k = 0; k < n; k++) {
+          const a = (k / n) * Math.PI * 2 + rand(i + k) * 0.6;
+          const dist = n === 3 ? br * 0.95 : br * 1.15;
+          const x = cx + Math.cos(a) * dist;
+          const y = cy + Math.sin(a) * dist;
           berries +=
-            `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${br.toFixed(1)}" fill="${c}"/>` +
-            `<circle cx="${(x - br * .3).toFixed(1)}" cy="${(y - br * .33).toFixed(1)}" r="${(br * .3).toFixed(1)}" fill="rgba(255,255,255,.7)"/>`;
-        });
+            `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${br.toFixed(1)}" fill="url(#holly-berry)"/>` +
+            `<ellipse cx="${(x - br * .35).toFixed(1)}" cy="${(y - br * .38).toFixed(1)}" rx="${(br * .28).toFixed(1)}" ry="${(br * .18).toFixed(1)}" fill="rgba(255,255,255,.65)"/>` +
+            `<circle cx="${(x + br * .2).toFixed(1)}" cy="${(y + br * .25).toFixed(1)}" r="${(br * .12).toFixed(1)}" fill="#3b1a10"/>`;
+        }
       }
     }
     svg.insertAdjacentHTML('beforeend', leaves + berries);
