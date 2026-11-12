@@ -365,15 +365,20 @@
   const canRemindDaily = canNotify && 'ServiceWorkerRegistration' in window &&
     'periodicSync' in ServiceWorkerRegistration.prototype;
 
+  // Returns true if the browser really allows daily background wake-ups
   async function enableDailyReminder() {
     const reg = await navigator.serviceWorker.ready;
-    if ('periodicSync' in reg) {
-      try {
-        await reg.periodicSync.register('new-door', { minInterval: 6 * 60 * 60 * 1000 });
-      } catch { /* only allowed for installed apps; the open-tab fallback still works */ }
-    }
     // Remember today's door as already announced, so the first notification is the next one
     reg.active?.postMessage({ type: 'seen', day: unlocked });
+    if (!('periodicSync' in reg)) return false;
+    try {
+      const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+      if (status.state !== 'granted') return false;
+      await reg.periodicSync.register('new-door', { minInterval: 6 * 60 * 60 * 1000 });
+      return true;
+    } catch {
+      return false; // only allowed for installed apps; the open-app fallback still works
+    }
   }
 
   // Keep the background sync registered on every visit once permission exists
@@ -405,9 +410,12 @@
   // ?intro in the URL always shows the intro (handy for testing).
   if (new URLSearchParams(location.search).has('intro')) introSeen = false;
 
+  // Step 3 whenever the app can ask; browsers without background wake-ups
+  // (e.g. Firefox, possibly Brave) get an honest note about the limitation.
   const nextStep = !installed ? 2
-    : (canRemindDaily && Notification.permission === 'default') ? 3
+    : (canNotify && Notification.permission === 'default') ? 3
     : null;
+  document.getElementById('notify-limited').hidden = canRemindDaily;
 
   const showStep = (n) => {
     introSteps.forEach((step, i) => { step.hidden = i !== n - 1; });
@@ -424,8 +432,10 @@
   document.getElementById('notify-yes').addEventListener('click', () => {
     Notification.requestPermission().then((result) => {
       if (result !== 'granted') return;
-      enableDailyReminder().catch(() => {});
-      showToast('Lovely! You will get a reminder when a new door opens.');
+      enableDailyReminder().then((daily) => showToast(daily
+        ? 'Lovely! You will get a reminder when a new door opens.'
+        : 'Notifications are on – but this browser only reminds you while the calendar is open.'))
+        .catch(() => {});
     }).catch(() => {});
   });
 
