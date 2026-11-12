@@ -327,14 +327,24 @@
   const isInstalled = () =>
     matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
-  const installHint = document.getElementById('install-hint');
   const installBtn = document.getElementById('install-btn');
   const installManual = document.getElementById('install-manual');
   let installPrompt = null;
 
+  // Intro: "Continue" leads to a second step with the install tip,
+  // unless the calendar already runs as an installed app.
+  const introStep1 = document.getElementById('intro-step-1');
+  const introStep2 = document.getElementById('intro-step-2');
+  const introContinue = document.getElementById('intro-continue');
+
   if (!isInstalled()) {
-    installHint.hidden = false;
     installManual.hidden = false;
+    introContinue.type = 'button';
+    introContinue.addEventListener('click', () => {
+      introStep1.hidden = true;
+      introStep2.hidden = false;
+      introStep2.querySelector('.intro-start').focus();
+    });
   }
 
   // Chrome / Edge / Brave offer a real install prompt
@@ -351,10 +361,13 @@
     const { outcome } = await installPrompt.userChoice;
     installPrompt = null;
     installBtn.hidden = true;
-    if (outcome === 'accepted') installHint.hidden = true;
+    if (outcome === 'accepted') installManual.hidden = true;
   });
 
-  window.addEventListener('appinstalled', () => { installHint.hidden = true; });
+  window.addEventListener('appinstalled', () => {
+    installBtn.hidden = true;
+    installManual.hidden = true;
+  });
 
   // ---------- daily "new door" notifications ----------
   // GitHub Pages has no server for push messages, so the reminder uses the
@@ -379,11 +392,12 @@
 
   // After the first heart was closed: explain, then ask the browser for permission
   lightbox.addEventListener('close', () => {
-    // Only in the installed app – in a normal browser tab reminders can't be delivered
-    if (!canNotify || !isInstalled() || Notification.permission !== 'default') return;
+    if (!canNotify || Notification.permission !== 'default') return;
     let asked = false;
     try { asked = localStorage.getItem(STORAGE_NOTIFY_ASKED) === '1'; } catch { /* ignore */ }
     if (asked || typeof notifyDialog.showModal !== 'function') return;
+    // In a normal browser tab, point out that reminders need the installed app
+    document.getElementById('notify-install-tip').hidden = isInstalled();
     setTimeout(() => notifyDialog.showModal(), 400);
   });
 
