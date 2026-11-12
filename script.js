@@ -365,4 +365,12 @@
   if (!new URLSearchParams(location.search).has('day')) {
     setTimeout(() => location.reload(), midnight - new Date());
   }
+
+  // ---------- installable app (PWA) ----------
+
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is optional */ });
+    });
+  }
 })();
