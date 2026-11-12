@@ -34,6 +34,17 @@
   // with rounded corners. An optional .gf-title child sits in a gap at the top.
   // The garland is redrawn whenever the frame changes size.
 
+  // ---------- visible viewport height ----------
+  // Mobile browsers count the area behind their address/tool bars in 100vh.
+  // Measure what is really visible so the page and modals fit and center.
+  const setAppHeight = () => {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-h', `${Math.round(h)}px`);
+  };
+  setAppHeight();
+  (window.visualViewport || window).addEventListener('resize', setAppHeight);
+  window.addEventListener('orientationchange', setAppHeight);
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   // Small deterministic random so leaves don't change on every redraw.
